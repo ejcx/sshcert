@@ -1,7 +1,6 @@
 package sshcert
 
 import (
-	"fmt"
 	"io/ioutil"
 	"testing"
 )
@@ -31,30 +30,31 @@ func TestNewCA(t *testing.T) {
 
 func TestPublicKeyString(t *testing.T) {
 	ca, _ := NewCA()
-	fmt.Println(ca.String())
-}
-
-func TestParsePublicKey(t *testing.T) {
-	pubBytes, _ := ioutil.ReadFile("testkeys.pub")
-	pub, err := ParsePublicKey(string(pubBytes))
+	_, err := ParsePublicKey(ca.String())
 	if err != nil {
 		t.Fatalf("Could not parse public key: %s", err)
 	}
-	fmt.Println(pub)
+}
+
+func TestParsePublicKey(t *testing.T) {
+	pubBytes, _ := ioutil.ReadFile("testfiles/testkeys.pub")
+	_, err := ParsePublicKey(string(pubBytes))
+	if err != nil {
+		t.Fatalf("Could not parse public key: %s", err)
+	}
 
 }
 
 func TestSignCert(t *testing.T) {
 	ca, _ := NewCA()
-	pubBytes, _ := ioutil.ReadFile("testkeys.pub")
+	pubBytes, _ := ioutil.ReadFile("testfiles/testkeys.pub")
 	pub, _ := ParsePublicKey(string(pubBytes))
 	signArgs := NewSigningArguments([]string{"root"})
 
-	cert, err := ca.SignCert(pub, signArgs)
+	_, err := ca.SignCert(pub, signArgs)
 	if err != nil {
-		t.Fatalf("Could nbot sign cert: %s", err)
+		t.Fatalf("Could not sign cert: %s", err)
 	}
-	fmt.Println(cert.String())
 }
 
 func TestGenerateNonce(t *testing.T) {
