@@ -1,13 +1,9 @@
 package sshcert
 
 import (
-	"encoding/base64"
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"testing"
-
-	"golang.org/x/crypto/ssh"
 )
 
 func TestCreatePrivateKey(t *testing.T) {
@@ -38,21 +34,32 @@ func TestPublicKeyString(t *testing.T) {
 	fmt.Println(ca.String())
 }
 
-func TestSignCert(t *testing.T) {
-	ca, _ := NewCA()
+func TestParsePublicKey(t *testing.T) {
 	pubBytes, _ := ioutil.ReadFile("testkeys.pub")
-	pubKeyParts := strings.Split(string(pubBytes), " ")
-	if len(pubKeyParts) != 3 {
-		t.Fatalf("Invalid pub key parts. Expected 3 parts got %d", len(pubKeyParts))
-	}
-	pubBytes, err := base64.StdEncoding.DecodeString(pubKeyParts[1])
-	pub, err := ssh.ParsePublicKey(pubBytes)
+	pub, err := ParsePublicKey(string(pubBytes))
 	if err != nil {
 		t.Fatalf("Could not parse public key: %s", err)
 	}
-	cert, err := ca.SignCert(pub)
+	fmt.Println(pub)
+
+}
+
+func TestSignCert(t *testing.T) {
+	ca, _ := NewCA()
+	pubBytes, _ := ioutil.ReadFile("testkeys.pub")
+	pub, _ := ParsePublicKey(string(pubBytes))
+	signArgs := NewSigningArguments([]string{"root"})
+
+	cert, err := ca.SignCert(pub, signArgs)
 	if err != nil {
 		t.Fatalf("Could nbot sign cert: %s", err)
 	}
 	fmt.Println(cert.String())
+}
+
+func TestGenerateNonce(t *testing.T) {
+	r := randomHex()
+	if len(r) != 32 {
+		t.Fatalf("Invalid nonce generated: %s", r)
+	}
 }
