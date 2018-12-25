@@ -71,5 +71,4 @@ func Main(cmd *cobra.Command, args []string) {
 	}
 	fmt.Println(ca.String())
 	fmt.Println(sshcert)
-
 }

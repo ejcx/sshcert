@@ -2,6 +2,7 @@ package sshcert
 
 import (
 	"io/ioutil"
+	"strings"
 	"testing"
 )
 
@@ -71,5 +72,26 @@ func TestMarshalUnmarshal(t *testing.T) {
 	}
 	if ca.PrivateKey.D.Cmp(ca2.PrivateKey.D) != 0 {
 		t.Fatal("The private keys are different after marshal/unmarshal")
+	}
+}
+
+func TestPrivateString(t *testing.T) {
+	ca, _ := NewCA()
+	priv, err := ca.PrivateString()
+	if err != nil {
+		t.Fatalf("Could not PEM encode private key: %s", err)
+	}
+	if !strings.Contains(priv, pemHeader) {
+		t.Fatal("Could not find SSHCert header in PEM private key")
+	}
+
+	// Now we need to attempt to parse it.
+	var ca2 CA
+	err = ca2.ParsePrivateString([]byte(priv))
+	if err != nil {
+		t.Fatalf("Could not parse PEM encoded syntax: %s", err)
+	}
+	if ca.PrivateKey.D.Cmp(ca2.PrivateKey.D) != 0 {
+		t.Fatal("The private keys are different pem encode decode")
 	}
 }

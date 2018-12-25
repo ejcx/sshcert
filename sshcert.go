@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"strings"
@@ -19,8 +20,9 @@ import (
 )
 
 const (
-	caName = "open-ssh-ca@ejj.io"
-	hour   = time.Second * 3600
+	caName    = "open-ssh-ca@ejj.io"
+	hour      = time.Second * 3600
+	pemHeader = "BEGIN SSHCERT PRIVATE KEY"
 )
 
 var (
@@ -77,6 +79,28 @@ func (c *CA) SignCert(pub ssh.PublicKey, signArgs *SigningArguments) (*Cert, err
 		return nil, err
 	}
 	return &Cert{Certificate: cert}, nil
+}
+
+func (c *CA) PrivateString() (string, error) {
+	privDer, err := x509.MarshalECPrivateKey(c.PrivateKey)
+	if err != nil {
+		return "", err
+	}
+	privBlock := pem.Block{
+		Type:    pemHeader,
+		Headers: nil,
+		Bytes:   privDer,
+	}
+	privatePEM := pem.EncodeToMemory(&privBlock)
+	return string(privatePEM), nil
+}
+
+func (c *CA) ParsePrivateString(data []byte) error {
+	// Decode returns a block and a 'rest'. We don't really care
+	// about the rest. In this case, the actual key data we need
+	// is in the block bytes.
+	block, _ := pem.Decode(data)
+	return c.UnmarshalCA(block.Bytes)
 }
 
 func (c *Cert) String() string {
