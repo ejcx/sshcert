@@ -15,12 +15,6 @@ func TestCreatePrivateKey(t *testing.T) {
 	}
 }
 
-func TestCreateSSHSigner(t *testing.T) {
-	_, err := createSSHSigner()
-	if err != nil {
-		t.Fatalf("Could not get signer: %s", err)
-	}
-}
 func TestNewCA(t *testing.T) {
 	_, err := NewCA()
 	if err != nil {
@@ -61,5 +55,20 @@ func TestGenerateNonce(t *testing.T) {
 	r := randomHex()
 	if len(r) != 32 {
 		t.Fatalf("Invalid nonce generated: %s", r)
+	}
+}
+
+func TestMarshalUnmarshal(t *testing.T) {
+	ca, _ := NewCA()
+	buf, err := ca.Marshal()
+	if err != nil {
+		t.Fatalf("Could not marshal ca: %s", err)
+	}
+	ca2, err := UnmarshalCA(buf)
+	if err != nil {
+		t.Fatalf("Could not unmarshal ca: %s", err)
+	}
+	if ca.PrivateKey.D.Cmp(ca2.PrivateKey.D) != 0 {
+		t.Fatal("The private keys are different after marshal/unmarshal")
 	}
 }

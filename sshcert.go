@@ -1,9 +1,12 @@
 package sshcert
 
+// sshcert is a package for creating and signing SSH user certificates.
+
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -16,11 +19,19 @@ import (
 )
 
 const (
-	CAName = "evans-open-ssh-ca@ejj.io"
-	Hour   = time.Second * 3600
+	caName = "open-ssh-ca@ejj.io"
+	hour   = time.Second * 3600
 )
 
 var (
+	// DefaultPermissions are the default permissions associated with the
+	// signing of an ssh user certificate. In this case, we specify three
+	// extensions.
+	// - permit-pty:
+	//     Is set because creating a new pty on connection is required for
+	//     the best shell ux.
+	// - permit-user-rc:
+	//     Allow users to forward their ssh agent to use jumpboxes.
 	DefaultPermissions = ssh.Permissions{
 		Extensions: map[string]string{
 			"permit-pty":              "",
@@ -30,10 +41,10 @@ var (
 	}
 )
 
-type SshCa struct {
-	Signer ssh.Signer
+type CA struct {
+	PrivateKey *ecdsa.PrivateKey
 }
-type SshCert struct {
+type Cert struct {
 	Certificate *ssh.Certificate
 }
 
@@ -43,17 +54,14 @@ type SigningArguments struct {
 	Duration    time.Duration
 }
 
-func NewCA() (SshCa, error) {
-	signer, err := createSSHSigner()
-	if err != nil {
-		return SshCa{}, err
-	}
-	return SshCa{
-		Signer: signer,
-	}, nil
+func NewCA() (CA, error) {
+	key, err := createPrivateKey()
+	return CA{
+		PrivateKey: key,
+	}, err
 }
 
-func (s *SshCa) SignCert(pub ssh.PublicKey, signArgs *SigningArguments) (*SshCert, error) {
+func (c *CA) SignCert(pub ssh.PublicKey, signArgs *SigningArguments) (*Cert, error) {
 	cert := &ssh.Certificate{
 		Key:             pub,
 		Serial:          randomSerial(),
@@ -64,25 +72,49 @@ func (s *SshCa) SignCert(pub ssh.PublicKey, signArgs *SigningArguments) (*SshCer
 		ValidPrincipals: signArgs.Principals,
 		Permissions:     signArgs.Permissions,
 	}
-	err := cert.SignCert(rand.Reader, s.Signer)
+	err := cert.SignCert(rand.Reader, c.Signer())
 	if err != nil {
 		return nil, err
 	}
-	return &SshCert{Certificate: cert}, nil
+	return &Cert{Certificate: cert}, nil
 }
 
-func (c *SshCert) String() string {
+func (c *Cert) String() string {
 	return fmt.Sprintf("%s %s", ssh.CertAlgoECDSA256v01, base64.StdEncoding.EncodeToString(c.Certificate.Marshal()))
 }
 
-func (s *SshCa) String() string {
-	return fmt.Sprintf("%s %s %s", s.Signer.PublicKey().Type(), base64.StdEncoding.EncodeToString(s.Signer.PublicKey().Marshal()), CAName)
+// Signer returns the signer associated with a private key.
+func (c *CA) Signer() ssh.Signer {
+	// We can ignore this error. NewSignerFromKey supports ecdsa
+	// PrivateKeys, but it's possible in the future we could
+	// add support for unsupported crypto primitives. We will
+	// need to check this error when we support more than ecdsa.
+	signer, _ := ssh.NewSignerFromKey(c.PrivateKey)
+	return signer
+}
+
+func (c *CA) String() string {
+	return fmt.Sprintf("%s %s %s", c.Signer().PublicKey().Type(), base64.StdEncoding.EncodeToString(c.Signer().PublicKey().Marshal()), caName)
+}
+
+func (c *CA) Marshal() ([]byte, error) {
+	return x509.MarshalECPrivateKey(c.PrivateKey)
+}
+
+func UnmarshalCA(buf []byte) (*CA, error) {
+	priv, err := x509.ParseECPrivateKey(buf)
+	if err != nil {
+		return nil, err
+	}
+	return &CA{
+		PrivateKey: priv,
+	}, nil
 }
 
 func NewSigningArguments(principals []string) *SigningArguments {
 	return &SigningArguments{
 		Permissions: DefaultPermissions,
-		Duration:    Hour,
+		Duration:    hour,
 		Principals:  principals,
 	}
 }
@@ -118,18 +150,6 @@ func createPrivateKey() (*ecdsa.PrivateKey, error) {
 		return &ecdsa.PrivateKey{}, err
 	}
 	return privateKey, nil
-}
-
-func createSSHSigner() (ssh.Signer, error) {
-	key, err := createPrivateKey()
-	if err != nil {
-		return nil, err
-	}
-	signer, err := ssh.NewSignerFromKey(key)
-	if err != nil {
-		return nil, err
-	}
-	return signer, nil
 }
 
 func randomSerial() uint64 {
