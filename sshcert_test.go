@@ -60,11 +60,12 @@ func TestGenerateNonce(t *testing.T) {
 
 func TestMarshalUnmarshal(t *testing.T) {
 	ca, _ := NewCA()
-	buf, err := ca.Marshal()
+	buf, err := ca.MarshalJSON()
 	if err != nil {
 		t.Fatalf("Could not marshal ca: %s", err)
 	}
-	ca2, err := UnmarshalCA(buf)
+	var ca2 CA
+	err = ca2.UnmarshalCA(buf)
 	if err != nil {
 		t.Fatalf("Could not unmarshal ca: %s", err)
 	}

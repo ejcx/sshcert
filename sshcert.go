@@ -97,8 +97,17 @@ func (c *CA) String() string {
 	return fmt.Sprintf("%s %s %s", c.Signer().PublicKey().Type(), base64.StdEncoding.EncodeToString(c.Signer().PublicKey().Marshal()), caName)
 }
 
-func (c *CA) Marshal() ([]byte, error) {
+func (c *CA) MarshalJSON() ([]byte, error) {
 	return x509.MarshalECPrivateKey(c.PrivateKey)
+}
+
+func (c *CA) UnmarshalCA(data []byte) error {
+	priv, err := x509.ParseECPrivateKey(data)
+	if err != nil {
+		return err
+	}
+	c.PrivateKey = priv
+	return nil
 }
 
 func UnmarshalCA(buf []byte) (*CA, error) {
