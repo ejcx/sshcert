@@ -16,6 +16,19 @@ func TestCreatePrivateKey(t *testing.T) {
 	}
 }
 
+func ExampleNewCA() {
+	// Your CA is has sensitive fields. It contains a PrivateKey
+	// that is the root of all trust in your infrastructure.
+	ca, err := NewCA()
+	if err != nil {
+		log.Fatalf("Could not create new ca: %s", err)
+	}
+	// This will print the public key of your certificate authority
+	// in a format that can be used by the `TrustedUserCAKeys` sshd
+	// config directive. 
+	fmt.Println(ca)
+}
+
 func TestNewCA(t *testing.T) {
 	_, err := NewCA()
 	if err != nil {
