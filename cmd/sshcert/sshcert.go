@@ -38,7 +38,6 @@ var RootCmd = &cobra.Command{
 func init() {
 	RootCmd.Flags().StringVar(&principal, "principal", "", "The linux user for logging in.")
 	RootCmd.MarkFlagRequired("principal")
-
 }
 
 func Execute() {

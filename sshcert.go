@@ -34,6 +34,8 @@ var (
 	//     the best shell ux.
 	// - permit-user-rc:
 	//     Allow users to forward their ssh agent to use jumpboxes.
+	// - permit-agent-forwarding
+	//     Allows your engineers to utilize a jumpbox seamlessly.
 	DefaultPermissions = ssh.Permissions{
 		Extensions: map[string]string{
 			"permit-pty":              "",
@@ -43,19 +45,30 @@ var (
 	}
 )
 
+// CA represents an SSH certificate authority.
 type CA struct {
 	PrivateKey *ecdsa.PrivateKey
 }
+
+// Cert represents an SSH public key that has been signed by a
+// certificate authority.
 type Cert struct {
 	Certificate *ssh.Certificate
 }
 
+// SigningArguments is the information that the SSH Certificate Authority
+// needs in order to sign an SSH public key. All of these fields are required.
+// If you would like to read more about how to configure the SigningArguments
+// then I found the following to be a good source of information:
+//   - https://github.com/metacloud/openssh/blob/master/PROTOCOL.certkeys
+// If you would like to use default settings then call `NewSigningArguments`
 type SigningArguments struct {
 	Principals  []string
 	Permissions ssh.Permissions
 	Duration    time.Duration
 }
 
+// NewCA will instantiate a new CA and generate a fresh ecdsa Private key.
 func NewCA() (CA, error) {
 	key, err := createPrivateKey()
 	return CA{
@@ -63,6 +76,8 @@ func NewCA() (CA, error) {
 	}, err
 }
 
+// SignCert is called to sign an ssh public key and produce an ssh certificate.
+// It's required to pass in SigningArguments or the signing will fail.
 func (c *CA) SignCert(pub ssh.PublicKey, signArgs *SigningArguments) (*Cert, error) {
 	cert := &ssh.Certificate{
 		Key:             pub,
@@ -81,6 +96,7 @@ func (c *CA) SignCert(pub ssh.PublicKey, signArgs *SigningArguments) (*Cert, err
 	return &Cert{Certificate: cert}, nil
 }
 
+// PrivateString converts a CA in to a PEM encoded private key
 func (c *CA) PrivateString() (string, error) {
 	privDer, err := x509.MarshalECPrivateKey(c.PrivateKey)
 	if err != nil {
@@ -95,6 +111,8 @@ func (c *CA) PrivateString() (string, error) {
 	return string(privatePEM), nil
 }
 
+// ParsePrivateString hydrates a CA type with a PEM encoded private key. This
+// method will modify the CA's private key.
 func (c *CA) ParsePrivateString(data []byte) error {
 	// Decode returns a block and a 'rest'. We don't really care
 	// about the rest. In this case, the actual key data we need
@@ -113,14 +131,18 @@ func (c *CA) Signer() ssh.Signer {
 	return signer
 }
 
+// String will output the public key of the Certificate Authority that is
+// used with the `TrustedUserCAKeys` directive in an sshd config.
 func (c *CA) String() string {
 	return fmt.Sprintf("%s %s %s", c.Signer().PublicKey().Type(), base64.StdEncoding.EncodeToString(c.Signer().PublicKey().Marshal()), caName)
 }
 
+// Bytes converts the certificate authority private key to it's SSH key bytes.
 func (c *CA) Bytes() ([]byte, error) {
 	return x509.MarshalECPrivateKey(c.PrivateKey)
 }
 
+// FromBytes hydreates a CA with the private key bytes.
 func (c *CA) FromBytes(data []byte) error {
 	priv, err := x509.ParseECPrivateKey(data)
 	if err != nil {
@@ -130,10 +152,15 @@ func (c *CA) FromBytes(data []byte) error {
 	return nil
 }
 
+// String will output the SSH certificate in a format that can be used
+// with an ssh client.
 func (c *Cert) String() string {
 	return fmt.Sprintf("%s %s", ssh.CertAlgoECDSA256v01, base64.StdEncoding.EncodeToString(c.Certificate.Marshal()))
 }
 
+// NewSigningArguments will create a default SigningArguments type with the
+// principals passed in. The list of principals passed in to this function
+// is the list of linux users that the user will be able to ssh to.
 func NewSigningArguments(principals []string) *SigningArguments {
 	return &SigningArguments{
 		Permissions: DefaultPermissions,
@@ -142,18 +169,23 @@ func NewSigningArguments(principals []string) *SigningArguments {
 	}
 }
 
+// SetPermissions will set the permissions of a SigningArguments type.
 func (s *SigningArguments) SetPermissions(permissions ssh.Permissions) {
 	s.Permissions = permissions
 }
 
+// SetDuration will set the duration of a SigningArguments type.
 func (s *SigningArguments) SetDuration(d time.Duration) {
 	s.Duration = d
 }
 
+// // SetPrincipals will set the principals of a SigningArguments type.
 func (s *SigningArguments) SetPrincipals(principals []string) {
 	s.Principals = principals
 }
 
+// ParsePublicKey will parse and return an SSH public key from it's
+// non-wire format.
 func ParsePublicKey(pub string) (ssh.PublicKey, error) {
 	pubParts := strings.Split(pub, " ")
 	if len(pubParts) != 2 && len(pubParts) != 3 {
