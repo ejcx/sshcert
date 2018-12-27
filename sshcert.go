@@ -100,11 +100,7 @@ func (c *CA) ParsePrivateString(data []byte) error {
 	// about the rest. In this case, the actual key data we need
 	// is in the block bytes.
 	block, _ := pem.Decode(data)
-	return c.UnmarshalCA(block.Bytes)
-}
-
-func (c *Cert) String() string {
-	return fmt.Sprintf("%s %s", ssh.CertAlgoECDSA256v01, base64.StdEncoding.EncodeToString(c.Certificate.Marshal()))
+	return c.FromBytes(block.Bytes)
 }
 
 // Signer returns the signer associated with a private key.
@@ -121,11 +117,11 @@ func (c *CA) String() string {
 	return fmt.Sprintf("%s %s %s", c.Signer().PublicKey().Type(), base64.StdEncoding.EncodeToString(c.Signer().PublicKey().Marshal()), caName)
 }
 
-func (c *CA) MarshalJSON() ([]byte, error) {
+func (c *CA) Bytes() ([]byte, error) {
 	return x509.MarshalECPrivateKey(c.PrivateKey)
 }
 
-func (c *CA) UnmarshalCA(data []byte) error {
+func (c *CA) FromBytes(data []byte) error {
 	priv, err := x509.ParseECPrivateKey(data)
 	if err != nil {
 		return err
@@ -134,14 +130,8 @@ func (c *CA) UnmarshalCA(data []byte) error {
 	return nil
 }
 
-func UnmarshalCA(buf []byte) (*CA, error) {
-	priv, err := x509.ParseECPrivateKey(buf)
-	if err != nil {
-		return nil, err
-	}
-	return &CA{
-		PrivateKey: priv,
-	}, nil
+func (c *Cert) String() string {
+	return fmt.Sprintf("%s %s", ssh.CertAlgoECDSA256v01, base64.StdEncoding.EncodeToString(c.Certificate.Marshal()))
 }
 
 func NewSigningArguments(principals []string) *SigningArguments {

@@ -1,7 +1,9 @@
 package sshcert
 
 import (
+	"fmt"
 	"io/ioutil"
+	"log"
 	"strings"
 	"testing"
 )
@@ -25,7 +27,7 @@ func ExampleNewCA() {
 	}
 	// This will print the public key of your certificate authority
 	// in a format that can be used by the `TrustedUserCAKeys` sshd
-	// config directive. 
+	// config directive.
 	fmt.Println(ca)
 }
 
@@ -50,7 +52,16 @@ func TestParsePublicKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not parse public key: %s", err)
 	}
+}
 
+func ExampleParsePublicKey() {
+	// To parse ssh public keys
+	pubBytes, _ := ioutil.ReadFile("example.pub")
+	pubKey, err := ParsePublicKey(string(pubBytes))
+	if err != nil {
+		log.Fatalf("Could not parse public key: %s", err)
+	}
+	fmt.Println(pubKey)
 }
 
 func TestSignCert(t *testing.T) {
@@ -72,14 +83,14 @@ func TestGenerateNonce(t *testing.T) {
 	}
 }
 
-func TestMarshalUnmarshal(t *testing.T) {
+func TestToBytesAndBack(t *testing.T) {
 	ca, _ := NewCA()
-	buf, err := ca.MarshalJSON()
+	buf, err := ca.Bytes()
 	if err != nil {
 		t.Fatalf("Could not marshal ca: %s", err)
 	}
 	var ca2 CA
-	err = ca2.UnmarshalCA(buf)
+	err = ca2.FromBytes(buf)
 	if err != nil {
 		t.Fatalf("Could not unmarshal ca: %s", err)
 	}
