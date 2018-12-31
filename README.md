@@ -1,5 +1,5 @@
 # sshcert
-sshcert is a package and CLI for handling SSH user certs
+sshcert is a package and CLI for handling SSH user certs. Consult the [Getting Started Guide](https://github.com/ejcx/sshcert/wiki/Getting-Started) to get started!
 
 ## Installation
 ```
