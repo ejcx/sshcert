@@ -99,6 +99,17 @@ func TestToBytesAndBack(t *testing.T) {
 	}
 }
 
+func TestSetCAName(t *testing.T) {
+	ca, _ := NewCA()
+	ca.SetName("mycahello")
+	s := ca.String()
+	if !strings.Contains(s, "mycahello") {
+		t.Fatal("CA pub key does not contain the proper name")
+	}
+	if strings.Contains(s, "ejj.io") {
+		t.Fatal("CA pub key contains the default name")
+	}
+}
 func TestPrivateString(t *testing.T) {
 	ca, _ := NewCA()
 	priv, err := ca.PrivateString()

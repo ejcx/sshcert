@@ -48,6 +48,7 @@ var (
 // CA represents an SSH certificate authority.
 type CA struct {
 	PrivateKey *ecdsa.PrivateKey
+	customName string
 }
 
 // Cert represents an SSH public key that has been signed by a
@@ -73,6 +74,7 @@ func NewCA() (CA, error) {
 	key, err := createPrivateKey()
 	return CA{
 		PrivateKey: key,
+		customName: caName,
 	}, err
 }
 
@@ -134,7 +136,7 @@ func (c *CA) Signer() ssh.Signer {
 // String will output the public key of the Certificate Authority that is
 // used with the `TrustedUserCAKeys` directive in an sshd config.
 func (c *CA) String() string {
-	return fmt.Sprintf("%s %s %s", c.Signer().PublicKey().Type(), base64.StdEncoding.EncodeToString(c.Signer().PublicKey().Marshal()), caName)
+	return fmt.Sprintf("%s %s %s", c.Signer().PublicKey().Type(), base64.StdEncoding.EncodeToString(c.Signer().PublicKey().Marshal()), c.customName)
 }
 
 // Bytes converts the certificate authority private key to it's SSH key bytes.
@@ -150,6 +152,10 @@ func (c *CA) FromBytes(data []byte) error {
 	}
 	c.PrivateKey = priv
 	return nil
+}
+
+func (c *CA) SetName(name string) {
+	c.customName = name
 }
 
 // String will output the SSH certificate in a format that can be used
