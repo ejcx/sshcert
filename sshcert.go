@@ -41,6 +41,7 @@ var (
 			"permit-pty":              "",
 			"permit-user-rc":          "",
 			"permit-port-forwarding": "",
+			"permit-agent-forwarding": "",
 		},
 	}
 )
