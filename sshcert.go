@@ -40,7 +40,7 @@ var (
 		Extensions: map[string]string{
 			"permit-pty":              "",
 			"permit-user-rc":          "",
-			"permit-agent-forwarding": "",
+			"permit-port-forwarding": "",
 		},
 	}
 )
