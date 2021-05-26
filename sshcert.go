@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	caName    = "open-ssh-ca@ejj.io"
-	hour      = time.Second * 3600
-	pemHeader = "BEGIN SSHCERT PRIVATE KEY"
+	caName         = "open-ssh-ca@ejj.io"
+	hour           = time.Second * 3600
+	allowableDrift = 60 * time.Second
+	pemHeader      = "BEGIN SSHCERT PRIVATE KEY"
 )
 
 var (
@@ -40,7 +41,7 @@ var (
 		Extensions: map[string]string{
 			"permit-pty":              "",
 			"permit-user-rc":          "",
-			"permit-port-forwarding": "",
+			"permit-port-forwarding":  "",
 			"permit-agent-forwarding": "",
 		},
 	}
@@ -83,11 +84,12 @@ func NewCA() (CA, error) {
 // It's required to pass in SigningArguments or the signing will fail.
 func (c *CA) SignCert(pub ssh.PublicKey, signArgs *SigningArguments) (*Cert, error) {
 	cert := &ssh.Certificate{
-		Key:             pub,
-		Serial:          randomSerial(),
-		CertType:        ssh.UserCert,
-		KeyId:           randomHex(),
-		ValidAfter:      uint64(time.Now().Unix()),
+		Key:      pub,
+		Serial:   randomSerial(),
+		CertType: ssh.UserCert,
+		KeyId:    randomHex(),
+		// Subtract 60 seconds to allow for some clock drift between the signature signing and the remote servers
+		ValidAfter:      uint64(time.Now().Add(-allowableDrift).Unix()),
 		ValidBefore:     uint64(time.Now().Add(signArgs.Duration).Unix()),
 		ValidPrincipals: signArgs.Principals,
 		Permissions:     signArgs.Permissions,
