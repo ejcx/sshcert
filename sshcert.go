@@ -164,7 +164,12 @@ func (c *CA) SetName(name string) {
 // String will output the SSH certificate in a format that can be used
 // with an ssh client.
 func (c *Cert) String() string {
-	return fmt.Sprintf("%s %s", ssh.CertAlgoECDSA256v01, base64.StdEncoding.EncodeToString(c.Certificate.Marshal()))
+	return fmt.Sprintf("%s %s", c.Type(), base64.StdEncoding.EncodeToString(c.Certificate.Marshal()))
+}
+
+// Type returns the certificate's algorithm name.
+func (c *Cert) Type() string {
+	return c.Certificate.Type()
 }
 
 // NewSigningArguments will create a default SigningArguments type with the
