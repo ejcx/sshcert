@@ -65,14 +65,27 @@ func ExampleParsePublicKey() {
 }
 
 func TestSignCert(t *testing.T) {
-	ca, _ := NewCA()
-	pubBytes, _ := ioutil.ReadFile("testfiles/testkeys.pub")
-	pub, _ := ParsePublicKey(string(pubBytes))
-	signArgs := NewSigningArguments([]string{"root"})
+	tests := []struct {
+		algo     string
+		fileName string
+	}{
+		{algo: "ecdsa-sha2-nistp256-cert-v01@openssh.com", fileName: "testkeys.pub"},
+		{algo: "ssh-ed25519-cert-v01@openssh.com", fileName: "ed25519_test_key.pub"},
+	}
 
-	_, err := ca.SignCert(pub, signArgs)
-	if err != nil {
-		t.Fatalf("Could not sign cert: %s", err)
+	for _, tc := range tests {
+		ca, _ := NewCA()
+		pubBytes, _ := ioutil.ReadFile(fmt.Sprintf("testfiles/%s", tc.fileName))
+		pub, _ := ParsePublicKey(string(pubBytes))
+		signArgs := NewSigningArguments([]string{"root"})
+
+		c, err := ca.SignCert(pub, signArgs)
+		if err != nil {
+			t.Fatalf("Could not sign cert: %s", err)
+		}
+		if c.Type() != tc.algo {
+			t.Fatalf("Certificate and public key type do not match: %s != %s", c.Type(), tc.algo)
+		}
 	}
 }
 
